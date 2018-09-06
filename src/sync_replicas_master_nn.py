@@ -222,10 +222,7 @@ class SyncReplicasMaster_NN(NN_Trainer):
             # reset essential elements
             self.meset_grad_buffer()
             self.grad_accumulator.meset_everything()
-            # save model for validation in a pre-specified frequency
-            #if self.cur_step%self._eval_freq == 0:
-            #    if "ResNet" not in self.network_config:
-            #       self._save_model(file_path=self._generate_model_path())
+
             self.cur_step += 1
             if self.cur_step % self.shrinkage_freq == 0:
                 self.shrink_counter += 1
@@ -253,7 +250,7 @@ class SyncReplicasMaster_NN(NN_Trainer):
         request_layers = []
         for layer_idx, layer in enumerate(self.network.parameters()):
             request_workers = []
-            layer_to_send = layer.data.numpy().astype(np.float64)
+            layer_to_send = layer.data.numpy().astype(np.float32)
             for i in range(self.world_size):
                 if i != 0:
                     req = self.comm.Isend([layer_to_send, MPI.DOUBLE], dest=i, tag=11+layer_idx)
@@ -271,9 +268,9 @@ class SyncReplicasMaster_NN(NN_Trainer):
             request_workers = []
             if self._enable_gpu:
                 # copy data to CPU then do the communicaiton staff
-                layer_to_send = layer.data.cpu().numpy().astype(np.float64)
+                layer_to_send = layer.data.cpu().numpy().astype(np.float32)
             else:
-                layer_to_send = layer.data.numpy().astype(np.float64)
+                layer_to_send = layer.data.numpy().astype(np.float32)
             self.comm.Bcast([layer_to_send, MPI.DOUBLE], root=0)
 
     def async_fetch_gradient_start(self):
@@ -291,7 +288,7 @@ class SyncReplicasMaster_NN(NN_Trainer):
         '''
         keep in mind the gradient here is wrapped gradient, which means it contains `W` and `b`
         '''
-        self._grad_aggregate_buffer[layer_idx] += gradient.numpy().astype(np.float64)
+        self._grad_aggregate_buffer[layer_idx] += gradient.numpy().astype(np.float32)
 
     def model_update(self, tmp_module):
         """write model fetched from parameter server to local model"""

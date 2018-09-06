@@ -312,7 +312,7 @@ class DistributedWorker(NN_Trainer):
         def __count_msg_sizes(msg):
             return len(msg)
         for p_index, p in enumerate(self.network.parameters()):
-            grad = p.grad.data.numpy().astype(np.float32)
+            grad = p.grad.data.numpy().astype(np.float32) if self._enable_gpu else p.grad.data.cpu().numpy().astype(np.float32)
             coded = self._coder.encode(grad)
             pickled = pickle.dumps(coded)
             byte_code = bytearray(pickled)
