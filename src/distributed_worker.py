@@ -247,11 +247,15 @@ class DistributedWorker(NN_Trainer):
                     comm_dur = time.time()-comm_start
 
                     prec1, prec5 = accuracy(logits.data, y_batch.data, topk=(1, 5))
+                    if self._enable_gpu:
+                        prec1, prec5 = prec1.cpu().numpy()[0], prec5.cpu().numpy()[0]
+                    else:
+                        prec1, prec5 = prec1.numpy()[0], prec5.numpy()[0]
                     # on the end of a certain iteration
                     print('Worker: {}, Step: {}, Epoch: {} [{}/{} ({:.0f}%)], Loss: {:.4f}, Time Cost: {:.4f}, Comp: {:.4f}, Encode: {: .4f}, Comm: {: .4f}, Msg(MB): {: .4f}, Prec@1: {: .4f}, Prec@5: {: .4f}'.format(
                         self.rank, self.cur_step, num_epoch, batch_idx * self.batch_size, len(train_loader.dataset), 
                         (100. * (batch_idx * self.batch_size) / len(train_loader.dataset)), loss.data[0], time.time()-iter_start_time, 
-                        comp_dur, encode_dur, comm_dur, _msg_counter/(1024.0**2), prec1.numpy()[0], prec5.numpy()[0]))
+                        comp_dur, encode_dur, comm_dur, _msg_counter/(1024.0**2), prec1, prec5))
                     # break here to fetch data then enter fetching step loop again
                     if self.cur_step%self._eval_freq==0:
                         self._evaluate_model(test_loader)
@@ -312,7 +316,10 @@ class DistributedWorker(NN_Trainer):
         def __count_msg_sizes(msg):
             return len(msg)
         for p_index, p in enumerate(self.network.parameters()):
-            grad = p.grad.data.numpy().astype(np.float32) if self._enable_gpu else p.grad.data.cpu().numpy().astype(np.float32)
+            if self._enable_gpu:
+                grad = p.grad.data.cpu().numpy().astype(np.float32)  
+            else:
+                p.grad.data.numpy().astype(np.float32)
             coded = self._coder.encode(grad)
             pickled = pickle.dumps(coded)
             byte_code = bytearray(pickled)

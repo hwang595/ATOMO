@@ -54,7 +54,7 @@ class SGD(Optimizer):
         for group in self.param_groups:
             group.setdefault('nesterov', False)
 
-    def step(self, grads, closure=None):
+    def step(self, grads, closure=None, cuda=False):
         """Performs a single optimization step.
         Arguments:
             closure (callable, optional): A closure that reevaluates the model
@@ -71,7 +71,7 @@ class SGD(Optimizer):
             nesterov = group['nesterov']
 
             for i,p in enumerate(group['params']):
-                d_p = torch.from_numpy(grads[i]).float()
+                d_p = torch.from_numpy(grads[i]).float().cuda() if cuda else torch.from_numpy(grads[i]).float()
                 if weight_decay != 0:
                     d_p.add_(weight_decay, p.data)
                 if momentum != 0:

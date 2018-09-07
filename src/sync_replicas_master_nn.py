@@ -18,7 +18,6 @@ from model_ops.alexnet import *
 from model_ops.fc_nn import FC_NN, FC_NN_Split
 from model_ops.densenet import DenseNet
 
-from svd_compression import decode
 from optim.adam import Adam
 from optim.sgd import SGD
 from utils import decompress
@@ -206,6 +205,9 @@ class SyncReplicasMaster_NN(NN_Trainer):
                     coded_msgs[layer_index].append(code)
                     
                 self.grad_accumulator.gradient_aggregate_counter[layer_index] += 1
+                    
+                #print(self.grad_accumulator.gradient_aggregate_counter)
+                #print('---------------------------------------------------------------------')
                 
                 enough_gradients_received = True
                 for j in self.grad_accumulator.gradient_aggregate_counter:
@@ -222,7 +224,10 @@ class SyncReplicasMaster_NN(NN_Trainer):
             # reset essential elements
             self.meset_grad_buffer()
             self.grad_accumulator.meset_everything()
-
+            # save model for validation in a pre-specified frequency
+            #if self.cur_step%self._eval_freq == 0:
+            #    if "ResNet" not in self.network_config:
+            #       self._save_model(file_path=self._generate_model_path())
             self.cur_step += 1
             if self.cur_step % self.shrinkage_freq == 0:
                 self.shrink_counter += 1
@@ -231,7 +236,7 @@ class SyncReplicasMaster_NN(NN_Trainer):
     def _model_update(self):
         # gradient shipped from workers are averaged and update the model
         self._grad_aggregate_buffer = map(lambda x: x / float(self._num_grad_to_collect), self._grad_aggregate_buffer)
-        self.optimizer.step(grads=self._grad_aggregate_buffer)   
+        self.optimizer.step(grads=self._grad_aggregate_buffer, cuda=self._enable_gpu)   
 
     def init_model_shapes(self):
         for p_index, p in enumerate(self.network.parameters()):
@@ -250,7 +255,7 @@ class SyncReplicasMaster_NN(NN_Trainer):
         request_layers = []
         for layer_idx, layer in enumerate(self.network.parameters()):
             request_workers = []
-            layer_to_send = layer.data.numpy().astype(np.float32)
+            layer_to_send = layer.data.numpy().astype(np.float64)
             for i in range(self.world_size):
                 if i != 0:
                     req = self.comm.Isend([layer_to_send, MPI.DOUBLE], dest=i, tag=11+layer_idx)
@@ -268,9 +273,9 @@ class SyncReplicasMaster_NN(NN_Trainer):
             request_workers = []
             if self._enable_gpu:
                 # copy data to CPU then do the communicaiton staff
-                layer_to_send = layer.data.cpu().numpy().astype(np.float32)
+                layer_to_send = layer.data.cpu().numpy().astype(np.float64)
             else:
-                layer_to_send = layer.data.numpy().astype(np.float32)
+                layer_to_send = layer.data.numpy().astype(np.float64)
             self.comm.Bcast([layer_to_send, MPI.DOUBLE], root=0)
 
     def async_fetch_gradient_start(self):
@@ -288,7 +293,7 @@ class SyncReplicasMaster_NN(NN_Trainer):
         '''
         keep in mind the gradient here is wrapped gradient, which means it contains `W` and `b`
         '''
-        self._grad_aggregate_buffer[layer_idx] += gradient.numpy().astype(np.float32)
+        self._grad_aggregate_buffer[layer_idx] += gradient.numpy().astype(np.float64)
 
     def model_update(self, tmp_module):
         """write model fetched from parameter server to local model"""
