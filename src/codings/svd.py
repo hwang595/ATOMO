@@ -27,6 +27,24 @@ def _resize_to_2d(x):
     tmp_shape = x_tmp.shape
     return x_tmp.reshape((int(tmp_shape[0]/2), int(tmp_shape[1]*2)))
 
+def _resize_to_2d_cuda(x):
+    """
+    x.shape > 2
+    If x.shape = (a, b, *c), assumed that each one of (a, b) pairs has relevant information in c.
+    """
+    shape = x.size()
+    if x.dim() == 1:
+        n = x.size()[0]
+        return x.reshape((n//2, 2))
+    if all([s == 1 for s in shape[2:]]):
+        return x.reshape((shape[0], shape[1]))
+    # each of (a, b) has related features
+    x = x.reshape((shape[0], shape[1], -1))
+    # stack those related features into a tall matrix
+    x_tmp = x.reshape((shape[0]*shape[1], -1))
+    tmp_shape = x_tmp.shape
+    return x_tmp.reshape((int(tmp_shape[0]/2), int(tmp_shape[1]*2)))
+
 
 def _sample_svd(s, rank=0):
     if s[0] < 1e-6:
@@ -86,6 +104,46 @@ class SVD(Coding):
                 i, probs = _sample_svd(s, rank=self.svd_rank)
                 u = u[:, i]
                 s = s[i] / probs
+                #  v = v[:, i]
+                vT = vT[i, :]
+            elif self.svd_rank > 0:
+                u = u[:, :self.svd_rank]
+                s = s[:self.svd_rank]
+                #  v = v[:, :self.svd_rank]
+                vT = vT[:self.svd_rank, :]
+
+            return {'u': u, 's': s, 'vT': vT, 'orig_size': orig_size,
+                    'reshaped': reshaped_flag, 'encode': True,
+                    'rank': self.svd_rank}
+        return {'grad': grad, 'encode': False}
+
+    def encode_cuda(self, grad, device, **kwargs):
+        if not isinstance(grad, torch.cuda.FloatTensor):
+            raise ValueError("Object passed wasn't set on GUDA, please check CUDA availability!")
+        # taking SVD on GPU
+        if not self.compress:
+            shape = list(grad.shape)
+            return {'grad': grad, 'encode': False}#, {}
+
+        orig_size = list(grad.size())
+        ndims = grad.dim()
+
+        reshaped_flag = False
+
+        if ndims != 2:
+            grad = _resize_to_2d_cuda(grad)
+            shape = list(grad.size())
+            ndims = len(shape)
+            reshaped_flag = True
+
+        if ndims == 2:
+            #u, s, vT = LA.svd(grad, full_matrices=False)
+            u, s, vT = torch.svd(grad, some=True)
+
+            if self.random_sample:
+                i, probs = _sample_svd(s, rank=self.svd_rank)
+                u = u[:, i]
+                s = s[i] / torch.tensor(probs).float().to(device)
                 #  v = v[:, i]
                 vT = vT[i, :]
             elif self.svd_rank > 0:
