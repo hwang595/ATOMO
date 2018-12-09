@@ -1,5 +1,5 @@
 # Atomo: Communication-efficient Learning via Atomic Sparsification
-This repository contains source code for Atomo, a general framework for atomic sparsification of stochastic gradients. Please check [https://arxiv.org/abs/1806.04090](https://arxiv.org/abs/1806.04090) for detailed information about this project.
+This repository contains source code for Atomo, a general framework for atomic sparsification of stochastic gradients. Please check [the full paper](http://papers.nips.cc/paper/8191-atomo-communication-efficient-learning-via-atomic-sparsification) for detailed information about this project.
 
 ## Overview:
 ATOMO is a general framework for atomic sparsification of stochastic gradients. Given a gradient, an atomic decomposition,
@@ -140,4 +140,17 @@ Those are potential directions we are actively working on, stay tuned!
 * Explore the use of Atomo with Fourier decompositions, due to its utility and prevalence in signal processing.
 * Examine how we can sparsify and compress gradients in a joint fashion to further reduce communication costs.
 * Explore jointly sparsification of the SVD and and its singular vectors.
-* Integrate ATOMO to state-of-the-art PS (or distributed) frameworks e.g. [Ray](https://rise.cs.berkeley.edu/projects/ray/) or [TensorFlow](https://www.tensorflow.org/).
+* Integrate ATOMO to state-of-the-art PS (or distributed) frameworks e.g. [Ray](https://rise.cs.berkeley.edu/projects/ray/).
+
+## Citation
+
+```
+@inproceedings{Draco,
+  author = {Lingjiao Chen and Hongyi Wang and Zachary Charles and Dimitris Papailiopoulos},
+  title = {DRACO: Byzantine-resilient Distributed Training via Redundant Gradients},
+  booktitle = {Proceedings of the 35th International Conference on Machine Learning, {ICML} 2018},
+  year = {2018},
+  month = jul,
+  url = {https://arxiv.org/abs/1803.09877},
+}
+```
