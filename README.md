@@ -145,12 +145,11 @@ Those are potential directions we are actively working on, stay tuned!
 ## Citation
 
 ```
-@inproceedings{Draco,
-  author = {Lingjiao Chen and Hongyi Wang and Zachary Charles and Dimitris Papailiopoulos},
-  title = {DRACO: Byzantine-resilient Distributed Training via Redundant Gradients},
-  booktitle = {Proceedings of the 35th International Conference on Machine Learning, {ICML} 2018},
-  year = {2018},
-  month = jul,
-  url = {https://arxiv.org/abs/1803.09877},
+@inproceedings{wang2018atomo,
+  title={ATOMO: Communication-efficient Learning via Atomic Sparsification},
+  author={Wang, Hongyi and Sievert, Scott and Liu, Shengchao and Charles, Zachary and Papailiopoulos, Dimitris and Wright, Stephen},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={9871--9882},
+  year={2018}
 }
 ```
